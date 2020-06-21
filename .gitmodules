@@ -1,0 +1,4 @@
+[submodule "MEnzDP-SimpleTabuSearch"]
+	path = MEnzDP-SimpleTabuSearch
+	url = git@github.com:chrisAta/MEnzDP-SimpleTabuSearch.git
+	branch = refactor
