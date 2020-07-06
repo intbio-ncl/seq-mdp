@@ -1,9 +1,9 @@
 
-from MEnzDP\-SimpleTabuSearch.lib.uniprot_ec_dict import uniprot_ec_dict
-from MEnzDP-SimpleTabuSearch.lib.max_min_diversity import compute_diverse_subset
+from diversityStats.lib.uniprot_ec_dict import uniprot_ec_dict
+from diversityStats.lib.max_min_diversity import compute_diverse_subset
 from collections import defaultdict
-from MEnzDP-SimpleTabuSearch.lib.gini_simpson import gini_simpson_dict, gini_simpson_value
-from tabuSearch.simple_tabu_imp import compute_MDP_tabu
+from diversityStats.lib.gini_simpson import gini_simpson_dict, gini_simpson_value
+from simpleTabuSearch.simple_tabu_imp import compute_MDP_tabu
 
 import matplotlib.pyplot as plt
 
