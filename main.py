@@ -51,16 +51,44 @@ def main():
 
 
     if _K != 0:
-        ac_subset, binary = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
-        ec_subset = get_ec_subset(ac_subset, ac_to_ec)
+        ac_subset, binary, solutions = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
 
-        print(ec_to_ac.keys())
+        maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
+
+        tabu_subset = compute_MDP_tabu('../Datasets/SSNMatrices/trans1074_identities.npy', '../Datasets/SSNMatrices/trans1074_headings.json', _K, 2)
+
         print(len(ec_to_ac.keys()))
-        print(len(ec_subset.keys()))
+        print(len(maxmin_subset.keys()))
 
-        print(sorted(ec_subset))
+        print(sorted(maxmin_subset))
         print(ac_subset)
-        print(binary)
+
+        gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
+        gs_val = gini_simpson_value(gs_dict)
+
+        print(gs_val)
+
+        best_tabu_subset = []
+        best_tabu_index = 0
+        best_score = 0
+
+        for i in range(len(tabu_subset)):
+
+            ecs = get_ec_subset(tabu_subset[i], ac_to_ec)
+            ec_num = len(ecs.keys())
+
+            if ec_num > best_score:
+                best_score = ec_num
+                best_tabu_index = i
+
+        best_tabu = tabu_subset[best_tabu_index]
+        print(get_ec_subset(best_tabu, ac_to_ec))
+        print(best_score)
+        print(best_tabu)
+        gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
+        gs_val = gini_simpson_value(gs_dict)
+        print(gs_val)
+
 
 
     else:
@@ -69,29 +97,42 @@ def main():
         k_arr = []
         gs_results = []
 
-        for i in range(1, int(0.2*node_num)):
-            ac_subset, binary = compute_diverse_subset(_DISTPATH, _HEADPATH, i)
+        flag = True
+
+        threshold = int(0.35 * node_num)
+        sol, binary, solutions = compute_diverse_subset(_DISTPATH, _HEADPATH, threshold)
+
+# for i in range(1, int(0.35 * node_num)):
+
+        counter = len(solutions[0])
+        for ac_subset in solutions:
+            # ac_subset, binary = compute_diverse_subset(_DISTPATH, _HEADPATH, i)
+            # print(ac_subset)
             ec_subset = get_ec_subset(ac_subset, ac_to_ec)
             subset_ec_count = len(ec_subset.keys())
 
-            print(f'K={i}\nTotal EC={total_ec_count}\nSubset EC={subset_ec_count}\n')
+            print(f'K={counter}\nTotal EC={total_ec_count}\nSubset EC={subset_ec_count}\n')
             results += [subset_ec_count/total_ec_count]
-            k_arr += [i]
-
-            if subset_ec_count == total_ec_count:
-                print(f'Full Coverage at K={i}!')
+            k_arr += [counter]
 
             gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
             gs_val = gini_simpson_value(gs_dict)
             gs_results += [gs_val]
 
+            if flag and subset_ec_count == total_ec_count:
+                print(f'Full Coverage at K={counter}!')
+                plt.axvline(counter, c="red", alpha=0.25, linestyle="--")
+                flag = False
+            counter += 1
+
         print(results)
         plt.plot(k_arr, results, label='EC Coverage')
         plt.plot(k_arr, gs_results, label='Gini-Simpson Index')
-        plt.legend(loc="upper left")
+        plt.legend(loc='upper left')
+        plt.title('Subset Diversity vs Subset Size')
+        plt.xlabel('Subset Size')
+        plt.ylabel('Subset Diversity')
         plt.show()
-
-    compute_MDP_tabu('../Datasets/SSNMatrices/trans1074_identities.npy', '../Datasets/SSNMatrices/trans1074_headings.json', 100)
 
 
 if __name__ == '__main__':
