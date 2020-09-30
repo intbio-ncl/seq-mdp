@@ -6,8 +6,9 @@ from diversityStats.lib.gini_simpson import gini_simpson_dict, gini_simpson_valu
 from simpleTabuSearch.simple_tabu_imp import compute_MDP_tabu
 
 import matplotlib.pyplot as plt
-
-
+import networkx as nx
+import numpy as np
+from copy import deepcopy
 #########################################
 
 import argparse
@@ -43,25 +44,84 @@ def get_ec_subset(subset, ac_to_ec):
     return ec_dict
 
 
+def sep_indices(val):
+
+    set_indices = []
+    non_indices = []
+
+    for i in range(0, len(val)):
+        if val[i] == 1:
+            set_indices += [i]
+        else:
+            non_indices += [i]
+
+    return (set_indices, non_indices)
+
+
+def score(mat, sol, use_clan=False):
+
+    score = 0
+    (set_indices, non_indices) = sep_indices(sol)
+
+    clan_threshold = 0.60
+    clan_penalty = 0
+
+    sim_list = []
+
+    for i in range(0, len(set_indices)):
+        for j in range(i + 1, len(set_indices)):
+            sim = ((1 - mat[set_indices[i], set_indices[j]])) - (mat[set_indices[i], set_indices[j]]/(1 - mat[set_indices[i], set_indices[j]]))
+            score += sim
+
+            sim_list.append(mat[set_indices[i], set_indices[j]])
+
+            if mat[set_indices[i], set_indices[j]] >= clan_threshold:
+                clan_penalty += 1
+
+    # if use_clan:
+    #     clan_penalty = 1 - (clan_penalty / len(set_indices))
+    #     score *= clan_penalty
+
+    return score, sim_list
+
+
 def main():
 
     ac_to_ec, ec_to_ac = uniprot_ec_dict(_ANNPATH, 2)
     ec_num = len(set(ac_to_ec.values()))
     total_ec_count = len(ec_to_ac.keys())
 
-
     if _K != 0:
-        ac_subset, binary, solutions = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
+        ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
 
+        G = nx.read_gml('./Results/trans1074_ssn_40.gml') #TODO argparse this
+        G.remove_edges_from(nx.selfloop_edges(G))
+
+        maxmin_distscore, sim_list = score(mat, binary, True)
+
+
+        fig, axs = plt.subplots(2)
+
+        axs.flat[0].hist(sim_list, bins=np.linspace(0, 1, num=20), histtype='step')
+        axs.flat[0].set_ylim(0, 2200)
+        axs.flat[0].text(0, 2000, np.mean(sim_list))
+
+        print(maxmin_distscore)
         maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
+        maxmin_edgecount = len(G.subgraph(ac_subset).edges)
+        maxmin_ECcount = len(maxmin_subset.keys()) / float(len(ec_to_ac.keys()))
 
-        tabu_subset = compute_MDP_tabu('../Datasets/SSNMatrices/trans1074_identities.npy', '../Datasets/SSNMatrices/trans1074_headings.json', _K, 2)
+        tabu_subset, score_list, best_progress, sim_list2 = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, binary)
+        axs.flat[1].hist(sim_list2, bins=np.linspace(0, 1, num=20), histtype='step')
+        axs.flat[1].set_ylim(0, 2200)
+        axs.flat[1].text(0, 2000, np.mean(sim_list2))
 
         print(len(ec_to_ac.keys()))
         print(len(maxmin_subset.keys()))
 
         print(sorted(maxmin_subset))
         print(ac_subset)
+        print(len(G.subgraph(ac_subset).edges))
 
         gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
         gs_val = gini_simpson_value(gs_dict)
@@ -72,35 +132,75 @@ def main():
         best_tabu_index = 0
         best_score = 0
 
+        ecnum_list = []
+        edgenum_list = []
+
         for i in range(len(tabu_subset)):
 
             ecs = get_ec_subset(tabu_subset[i], ac_to_ec)
-            ec_num = len(ecs.keys())
+            ec_num = len(ecs.keys()) / float(total_ec_count)
+            ecnum_list += [ec_num]
+            print(ec_num, len(G.subgraph(tabu_subset[i]).edges), score_list[i])
+            edgenum_list += [len(G.subgraph(tabu_subset[i]).edges)]
 
             if ec_num > best_score:
                 best_score = ec_num
                 best_tabu_index = i
 
         best_tabu = tabu_subset[best_tabu_index]
-        print(get_ec_subset(best_tabu, ac_to_ec))
+        print(get_ec_subset(best_tabu, ac_to_ec).keys())
         print(best_score)
         print(best_tabu)
         gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
         gs_val = gini_simpson_value(gs_dict)
         print(gs_val)
 
+        fig1, ax1 = plt.subplots()
 
+        ax1.plot(best_progress)
+        ax1.set_xlabel("Epochs")
+        ax1.set_ylabel("Distance Score")
+        ax1.set_title("Distance Score Over Time for K=62 ")
+        ax1.axhline(maxmin_distscore, c="red", alpha=0.25, linestyle="--")
+
+        fig, axs = plt.subplots(2)
+        fig.suptitle('EC Coverage vs Distance Score/Number of Edges for K=62')
+
+
+        temp_ecnum_list = deepcopy(ecnum_list)
+        print(edgenum_list, ecnum_list)
+        edgenum_list, ecnum_list = (list(t) for t in zip(*sorted(zip(edgenum_list, ecnum_list))))
+        print(edgenum_list, ecnum_list)
+        print(score_list, temp_ecnum_list)
+        score_list, temp_ecnum_list = (list(t) for t in zip(*sorted(zip(score_list, temp_ecnum_list))))
+        print(score_list, temp_ecnum_list)
+
+        axs[0].scatter(edgenum_list, ecnum_list, alpha=0.25)
+        axs.flat[0].set(xlabel='Number of Edges')
+        axs.flat[0].set(ylabel='EC Coverage')
+        axs.flat[0].set_ylim(0, 1)
+        axs[0].scatter(maxmin_edgecount, maxmin_ECcount)
+        axs[0].plot(edgenum_list, ecnum_list, alpha=0.25)
+
+        axs[1].scatter(score_list, temp_ecnum_list, alpha=0.25)
+        axs.flat[1].set(xlabel='Distance Score')
+        axs.flat[1].set(ylabel='EC Coverage')
+        axs.flat[1].set_ylim(0, 1)
+        axs[1].scatter(maxmin_distscore, maxmin_ECcount)
+        axs[1].plot(score_list, temp_ecnum_list, alpha=0.25)
+
+        plt.show()
 
     else:
-        node_num  = len(ac_to_ec)
+        node_num = len(ac_to_ec)
         results = []
         k_arr = []
         gs_results = []
 
         flag = True
 
-        threshold = int(0.35 * node_num)
-        sol, binary, solutions = compute_diverse_subset(_DISTPATH, _HEADPATH, threshold)
+        threshold = int(0.80 * node_num)
+        sol, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, threshold)
 
 # for i in range(1, int(0.35 * node_num)):
 
@@ -128,7 +228,7 @@ def main():
         print(results)
         plt.plot(k_arr, results, label='EC Coverage')
         plt.plot(k_arr, gs_results, label='Gini-Simpson Index')
-        plt.legend(loc='upper left')
+        plt.legend(loc='upper right')
         plt.title('Subset Diversity vs Subset Size')
         plt.xlabel('Subset Size')
         plt.ylabel('Subset Diversity')
