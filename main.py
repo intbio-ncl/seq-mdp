@@ -94,7 +94,7 @@ def main():
     if _K != 0:
         ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
 
-        G = nx.read_gml('./Results/trans1074_ssn_40.gml') #TODO argparse this
+        G = nx.read_gml('./PF00067_ssn_40.gml') #TODO argparse this
         G.remove_edges_from(nx.selfloop_edges(G))
 
         maxmin_distscore, sim_list = score(mat, binary, True)
@@ -103,8 +103,13 @@ def main():
         fig, axs = plt.subplots(2)
 
         axs.flat[0].hist(sim_list, bins=np.linspace(0, 1, num=20), histtype='step')
-        axs.flat[0].set_ylim(0, 2200)
-        axs.flat[0].text(0, 2000, np.mean(sim_list))
+        axs.flat[0].set_ylim(0, 5000)
+        axs.flat[0].set_title("Max-Min MDP Solver", fontsize=10, fontweight='bold')
+
+        mean = round(np.mean(sim_list), 3)
+        std = round(np.std(sim_list), 3)
+
+        axs.flat[0].text(0, 4000, f"{mean}±{std}")
 
         print(maxmin_distscore)
         maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
@@ -113,8 +118,16 @@ def main():
 
         tabu_subset, score_list, best_progress, sim_list2 = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, binary)
         axs.flat[1].hist(sim_list2, bins=np.linspace(0, 1, num=20), histtype='step')
-        axs.flat[1].set_ylim(0, 2200)
-        axs.flat[1].text(0, 2000, np.mean(sim_list2))
+        axs.flat[1].set_ylim(0, 5000)
+        axs.flat[1].set_title("Tabu Search MDP Solver", fontsize=10, fontweight='bold')
+
+
+        mean = round(np.mean(sim_list2), 3)
+        std = round(np.std(sim_list2), 3)
+
+        axs.flat[1].text(0, 4000, f"{mean}±{std}")
+
+        fig.suptitle("Sequence Similarity Distributions for PF00067")
 
         print(len(ec_to_ac.keys()))
         print(len(maxmin_subset.keys()))
@@ -228,7 +241,7 @@ def main():
         print(results)
         plt.plot(k_arr, results, label='EC Coverage')
         plt.plot(k_arr, gs_results, label='Gini-Simpson Index')
-        plt.legend(loc='upper right')
+        plt.legend(loc='upper left')
         plt.title('Subset Diversity vs Subset Size')
         plt.xlabel('Subset Size')
         plt.ylabel('Subset Diversity')
