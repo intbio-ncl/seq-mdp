@@ -1,7 +1,7 @@
 
 from collections import defaultdict
 
-_FILE = "./ipr/PF00106_seqs.fasta.tsv"
+_FILE = "./ipr/PF00155_trembl_ipr.tsv"
 
 
 def read_file():
@@ -33,7 +33,7 @@ def read_file():
 
 def write_results(res_dict):
 
-    fw = open('PF00106_ipr.tab', 'w')
+    fw = open('PF00155_trembl_ipr.tab', 'w')
 
     fw.write("Accession\tSignatures\n")
 

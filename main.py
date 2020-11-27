@@ -94,7 +94,7 @@ def main():
     if _K != 0:
         ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
 
-        G = nx.read_gml('./PF00067_ssn_40.gml') #TODO argparse this
+        G = nx.read_gml('./PF00155_ssn_40.gml') #TODO argparse this
         G.remove_edges_from(nx.selfloop_edges(G))
 
         maxmin_distscore, sim_list = score(mat, binary, True)
@@ -127,7 +127,7 @@ def main():
 
         axs.flat[1].text(0, 4000, f"{mean}±{std}")
 
-        fig.suptitle("Sequence Similarity Distributions for PF00067")
+        fig.suptitle("Sequence Similarity Distributions for PF00171 ")
 
         print(len(ec_to_ac.keys()))
         print(len(maxmin_subset.keys()))
@@ -173,11 +173,11 @@ def main():
         ax1.plot(best_progress)
         ax1.set_xlabel("Epochs")
         ax1.set_ylabel("Distance Score")
-        ax1.set_title("Distance Score Over Time for K=62 ")
+        ax1.set_title("Distance Score Over Time for K=100 ")
         ax1.axhline(maxmin_distscore, c="red", alpha=0.25, linestyle="--")
 
         fig, axs = plt.subplots(2)
-        fig.suptitle('EC Coverage vs Distance Score/Number of Edges for K=62')
+        fig.suptitle('EC Coverage vs Distance Score/Number of Edges for K=100')
 
 
         temp_ecnum_list = deepcopy(ecnum_list)
@@ -212,7 +212,7 @@ def main():
 
         flag = True
 
-        threshold = int(0.80 * node_num)
+        threshold = int(0.1 * node_num)
         sol, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, threshold)
 
 # for i in range(1, int(0.35 * node_num)):
@@ -241,11 +241,12 @@ def main():
         print(results)
         plt.plot(k_arr, results, label='EC Coverage')
         plt.plot(k_arr, gs_results, label='Gini-Simpson Index')
-        plt.legend(loc='upper left')
-        plt.title('Subset Diversity vs Subset Size')
+        plt.legend(loc='upper right')
+        plt.title('Subset Diversity vs Subset Size for PF04055')
         plt.xlabel('Subset Size')
         plt.ylabel('Subset Diversity')
         plt.show()
+        plt.save('./PF04055_EC_Diversity.pdf')
 
 
 if __name__ == '__main__':

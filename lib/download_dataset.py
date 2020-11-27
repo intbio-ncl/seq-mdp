@@ -10,7 +10,7 @@ sig = 'PF00155'
 
 def SPARQL_query_trembl(sig, swiss_len):
 
-    trembl_len = 1000 - swiss_len
+    trembl_len = 10000 - swiss_len
 
     sparql = SPARQLWrapper(_ENDPOINT)
 
@@ -113,11 +113,11 @@ def SPARQL_query_swissprot(sig):
 
     len_seqs = [len(seq) for seq in all_seqs]
 
-    # fig, ax = plt.subplots()
-    # ax.hist(len_seqs, bins=np.linspace(0, 1500, num=20))
-    # ax.set_title(f'Swiss-Prot Bacterial Sequence Length Distribution for {sig}')
-    # ax.set_xlabel('Length')
-    # ax.set_ylabel('Frequency')
+    fig, ax = plt.subplots()
+    ax.hist(len_seqs, bins=np.linspace(0, 1500, num=20))
+    ax.set_title(f'Swiss-Prot Bacterial Sequence Length Distribution for {sig}')
+    ax.set_xlabel('Length')
+    ax.set_ylabel('Frequency')
 
     return keep_seqs
 
@@ -153,6 +153,7 @@ def SPARQL_query_families():
 
     return fams
 
+
 def SPARQL_query_ec_count(sig):
 
     sparql = SPARQLWrapper(_ENDPOINT)
@@ -162,7 +163,7 @@ def SPARQL_query_ec_count(sig):
         PREFIX up: <http://purl.uniprot.org/core/>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX taxon: <http://purl.uniprot.org/taxonomy/>
-        SELECT DISTINCT ?enz
+        SELECT ?protein ?enz
         WHERE
         {{
             ?protein a up:Protein .
@@ -186,7 +187,7 @@ def SPARQL_query_ec_count(sig):
 
 def write_fasta(seqs):
 
-    fw = open(f"{sig}_seqs.fasta", "w")
+    fw = open(f"{sig}_seqs_trembl.fasta", "w")
 
     for seq in seqs:
         id = seq['protein']['value'].split('/')[-1]
@@ -204,7 +205,7 @@ def download_dataset(sig):
     print(len(trembl_seqs))
 
     combined_seqs = list(swiss_seqs) + list(trembl_seqs)
-    # write_fasta(combined_seqs)
+    write_fasta(combined_seqs)
     # plt.show()
 
 

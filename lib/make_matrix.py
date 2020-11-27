@@ -3,13 +3,13 @@ import numpy as np
 from collections import defaultdict
 import json
 
-_INPUT = "./PF00106SeqSim/all/identities.txt"
+_INPUT = "./PF00155_trembl_mat.txt"
 
 
 def read_identities(file):
 
     fr = open(file, 'r')
-    mat = np.zeros((1000, 1000))
+    mat = np.zeros((10_000, 10_000))
     mat_dict = defaultdict(dict)
     index_dict = defaultdict(int)
 
@@ -44,12 +44,12 @@ def read_identities(file):
 
 def save_matrix(mat):
 
-    np.save('PF00106_mat.npy', mat)
+    np.save('PF00155_trembl_mat.npy', mat)
 
 
 def save_header(headers):
 
-    with open(f'PF00106_headings.json', 'w') as outfile:
+    with open(f'PF00155_trembl_headings.json', 'w') as outfile:
         json.dump(list(headers), outfile)
 
 
