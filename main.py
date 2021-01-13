@@ -132,6 +132,10 @@ def main():
         print(len(ec_to_ac.keys()))
         print(len(maxmin_subset.keys()))
 
+        greedy_coverage = len(maxmin_subset.keys()) / len(ec_to_ac.keys())
+
+        print(f"Greedy Coverage: {greedy_coverage}")
+
         print(sorted(maxmin_subset))
         print(ac_subset)
         print(len(G.subgraph(ac_subset).edges))
@@ -139,7 +143,7 @@ def main():
         gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
         gs_val = gini_simpson_value(gs_dict)
 
-        print(gs_val)
+        print(f"Greedy Gini: {gs_val}")
 
         best_tabu_subset = []
         best_tabu_index = 0
@@ -166,7 +170,7 @@ def main():
         print(best_tabu)
         gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
         gs_val = gini_simpson_value(gs_dict)
-        print(gs_val)
+        print(f"Tabu Gini: {gs_val}")
 
         fig1, ax1 = plt.subplots()
 
@@ -178,7 +182,6 @@ def main():
 
         fig, axs = plt.subplots(2)
         fig.suptitle('EC Coverage vs Distance Score/Number of Edges for K=100')
-
 
         temp_ecnum_list = deepcopy(ecnum_list)
         print(edgenum_list, ecnum_list)
