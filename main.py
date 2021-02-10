@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 from diversityStats.lib.uniprot_ec_dict import uniprot_ec_dict
 from diversityStats.lib.max_min_diversity import compute_diverse_subset
@@ -18,13 +19,14 @@ parser.add_argument("-a", "--annotation", help="Path to the annotation", type=st
 parser.add_argument("-hd", "--heading", help="Path to heading file", type=str, required=True)
 parser.add_argument("-d", "--distance", help="Path to distance file", type=str, required=True)
 parser.add_argument("-k", "--subset", help="Subset size", type=int, required=True)
-
+parser.add_argument("-g", "--graph", help="Path to Similarity Network (.gml) to output graph-based results", type=str, required=True)
 
 args = parser.parse_args()
 _ANNPATH = args.annotation
 _HEADPATH = args.heading
 _DISTPATH = args.distance
 _K = args.subset
+_GRAPHPATH = args.graph
 
 
 #########################################
@@ -94,11 +96,10 @@ def main():
     if _K != 0:
         ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
 
-        G = nx.read_gml('./PF00155_ssn_40.gml') #TODO argparse this
+        G = nx.read_gml(_GRAPHPATH)
         G.remove_edges_from(nx.selfloop_edges(G))
 
         maxmin_distscore, sim_list = score(mat, binary, True)
-
 
         fig, axs = plt.subplots(2)
 
