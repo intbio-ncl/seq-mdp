@@ -122,7 +122,6 @@ def main():
         axs.flat[1].set_ylim(0, 5000)
         axs.flat[1].set_title("Tabu Search MDP Solver", fontsize=10, fontweight='bold')
 
-
         mean = round(np.mean(sim_list2), 3)
         std = round(np.std(sim_list2), 3)
 
@@ -207,6 +206,17 @@ def main():
         axs[1].plot(score_list, temp_ecnum_list, alpha=0.25)
 
         plt.show()
+
+        fw_greedy = open("./greedy_subset.txt", "w")
+        fw_TS = open("./ts_subset.txt", "w")
+
+        for entry in ac_subset:
+            fw_greedy.write(entry + "\n")
+        for entry in best_tabu:
+            fw_TS.write(entry + "\n")
+
+        fw_greedy.close()
+        fw_TS.close()
 
     else:
         node_num = len(ac_to_ec)
