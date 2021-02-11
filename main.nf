@@ -7,6 +7,7 @@ params.ann = null
 params.graph = null
 params.k = null
 params.outdir = null
+params.solver = null
 
 
 mat = file( params.mat )
@@ -14,6 +15,7 @@ head = file( params.head )
 ann = file( params.ann )
 graph = file ( params.graph )
 k = params.k
+solver = params.solver
 
 // Create output directory and subdirectories
 outdir = file( params.outdir )
@@ -35,6 +37,6 @@ process solve_mdp{
     file "*.txt"
 
     """
-    python3 /code/main.py -a ${ann} -hd ${head} -d ${mat} -k ${k} -g ${graph}
+    python3 /code/main.py -a ${ann} -hd ${head} -d ${mat} -k ${k} -g ${graph} -s ${solver}
     """
 }

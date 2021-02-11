@@ -20,6 +20,8 @@ parser.add_argument("-hd", "--heading", help="Path to heading file", type=str, r
 parser.add_argument("-d", "--distance", help="Path to distance file", type=str, required=True)
 parser.add_argument("-k", "--subset", help="Subset size", type=int, required=True)
 parser.add_argument("-g", "--graph", help="Path to Similarity Network (.gml) to output graph-based results", type=str, required=True)
+parser.add_argument("-s", "--solver", choices=["greedy", "ts", "all"], help="Solver(s) to use (Choices are 'greedy', 'ts', or both with 'all').", required=True)
+
 
 args = parser.parse_args()
 _ANNPATH = args.annotation
@@ -27,6 +29,7 @@ _HEADPATH = args.heading
 _DISTPATH = args.distance
 _K = args.subset
 _GRAPHPATH = args.graph
+_SOLVER = args.solver
 
 
 #########################################
@@ -87,6 +90,79 @@ def score(mat, sol, use_clan=False):
     return score, sim_list
 
 
+def greedy_mdp(ac_to_ec, ec_to_ac):
+
+    ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
+    G = nx.read_gml(_GRAPHPATH)
+    G.remove_edges_from(nx.selfloop_edges(G))
+
+    maxmin_distscore, sim_list = score(mat, binary, True)
+
+    maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
+    maxmin_edgecount = len(G.subgraph(ac_subset).edges)
+    maxmin_ECcount = len(maxmin_subset.keys()) / float(len(ec_to_ac.keys()))
+
+    greedy_coverage = len(maxmin_subset.keys()) / len(ec_to_ac.keys())
+    print(f"Greedy Coverage: {greedy_coverage}")
+
+    print(sorted(maxmin_subset))
+    print(ac_subset)
+    print(len(G.subgraph(ac_subset).edges))
+
+    gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
+    gs_val = gini_simpson_value(gs_dict)
+
+    print(f"Greedy Gini: {gs_val}")
+
+    fw_greedy = open("./greedy_subset.txt", "w")
+    for entry in ac_subset:
+        fw_greedy.write(entry + "\n")
+
+    fw_greedy.close()
+
+
+def ts_mdp(ac_to_ec, ec_to_ac, preset=None):
+
+    total_ec_count = len(ec_to_ac.keys())
+    tabu_subset, score_list, best_progress, sim_list2 = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, preset)
+
+    G = nx.read_gml(_GRAPHPATH)
+    G.remove_edges_from(nx.selfloop_edges(G))
+
+    best_tabu_subset = []
+    best_tabu_index = 0
+    best_score = 0
+
+    ecnum_list = []
+    edgenum_list = []
+
+    for i in range(len(tabu_subset)):
+
+        ecs = get_ec_subset(tabu_subset[i], ac_to_ec)
+        ec_num = len(ecs.keys()) / float(total_ec_count)
+        ecnum_list += [ec_num]
+        print(ec_num, len(G.subgraph(tabu_subset[i]).edges), score_list[i])
+        edgenum_list += [len(G.subgraph(tabu_subset[i]).edges)]
+
+        if ec_num > best_score:
+            best_score = ec_num
+            best_tabu_index = i
+
+    best_tabu = tabu_subset[best_tabu_index]
+    print(get_ec_subset(best_tabu, ac_to_ec).keys())
+    print(best_score)
+    print(best_tabu)
+    gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
+    gs_val = gini_simpson_value(gs_dict)
+    print(f"Tabu Gini: {gs_val}")
+
+    fw_TS = open("./ts_subset.txt", "w")
+    for entry in best_tabu:
+        fw_TS.write(entry + "\n")
+
+    fw_TS.close()
+
+
 def main():
 
     ac_to_ec, ec_to_ac = uniprot_ec_dict(_ANNPATH, 2)
@@ -94,6 +170,15 @@ def main():
     total_ec_count = len(ec_to_ac.keys())
 
     if _K != 0:
+
+        if _SOLVER in ('all', 'greedy'):
+            greedy_mdp(ac_to_ec, ec_to_ac)
+
+        if _SOLVER in ('all', 'ts'):
+            ts_mdp(ac_to_ec, ec_to_ac)
+
+        exit()
+
         ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
 
         G = nx.read_gml(_GRAPHPATH)
@@ -207,16 +292,7 @@ def main():
 
         plt.show()
 
-        fw_greedy = open("./greedy_subset.txt", "w")
-        fw_TS = open("./ts_subset.txt", "w")
 
-        for entry in ac_subset:
-            fw_greedy.write(entry + "\n")
-        for entry in best_tabu:
-            fw_TS.write(entry + "\n")
-
-        fw_greedy.close()
-        fw_TS.close()
 
     else:
         node_num = len(ac_to_ec)
