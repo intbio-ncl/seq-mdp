@@ -20,12 +20,15 @@ solver = params.solver
 // Create output directory and subdirectories
 outdir = file( params.outdir )
 outdir.mkdirs()
-subsets = file(outdir.name + '/subsets')
-subsets.mkdirs()
+// subsets = file( outdir.name + '/subsets' )
+// subsets.mkdirs()
+// plots = file( outdir.name + '/plots' )
+// plots.mkdirs()
+
 
 process solve_mdp{
 
-    publishDir subsets, mode : "copy"
+    publishDir outdir, mode : "copy"
 
     input:
     file mat
@@ -35,6 +38,7 @@ process solve_mdp{
 
     output:
     file "*.txt"
+    file "*.pdf"
 
     """
     python3 /code/main.py -a ${ann} -hd ${head} -d ${mat} -k ${k} -g ${graph} -s ${solver}

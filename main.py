@@ -120,11 +120,13 @@ def greedy_mdp(ac_to_ec, ec_to_ac):
 
     fw_greedy.close()
 
+    plot_res(sim_list, 'greedy')
+
 
 def ts_mdp(ac_to_ec, ec_to_ac, preset=None):
 
     total_ec_count = len(ec_to_ac.keys())
-    tabu_subset, score_list, best_progress, sim_list2 = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, preset)
+    tabu_subset, score_list, best_progress, sim_list = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, preset)
 
     G = nx.read_gml(_GRAPHPATH)
     G.remove_edges_from(nx.selfloop_edges(G))
@@ -162,6 +164,35 @@ def ts_mdp(ac_to_ec, ec_to_ac, preset=None):
 
     fw_TS.close()
 
+    plot_res(sim_list, 'tabu')
+
+
+def plot_res(sim_list, solver):
+
+    fig, axs = plt.subplots()
+
+    solver_title = ''
+    file_title = ''
+
+    if solver == 'tabu':
+        solver_title = "Tabu Search"
+        file_title = 'ts_distribution.pdf'
+
+    elif solver == 'greedy':
+        solver_title = 'Greedy'
+        file_title = 'greedy_distribution.pdf'
+
+    plt.hist(sim_list, bins=np.linspace(0, 1, num=20), histtype='step')
+    plt.ylim(0, 5000)
+    plt.title(f"Sequence Identity Distribution: K={_K}, Solver={solver_title}", fontsize=10, fontweight='bold')
+
+    mean = round(np.mean(sim_list), 3)
+    std = round(np.std(sim_list), 3)
+
+    plt.text(0, 4000, f"{mean}±{std}")
+
+    plt.savefig(file_title)
+
 
 def main():
 
@@ -176,123 +207,6 @@ def main():
 
         if _SOLVER in ('all', 'ts'):
             ts_mdp(ac_to_ec, ec_to_ac)
-
-        exit()
-
-        ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
-
-        G = nx.read_gml(_GRAPHPATH)
-        G.remove_edges_from(nx.selfloop_edges(G))
-
-        maxmin_distscore, sim_list = score(mat, binary, True)
-
-        fig, axs = plt.subplots(2)
-
-        axs.flat[0].hist(sim_list, bins=np.linspace(0, 1, num=20), histtype='step')
-        axs.flat[0].set_ylim(0, 5000)
-        axs.flat[0].set_title("Max-Min MDP Solver", fontsize=10, fontweight='bold')
-
-        mean = round(np.mean(sim_list), 3)
-        std = round(np.std(sim_list), 3)
-
-        axs.flat[0].text(0, 4000, f"{mean}±{std}")
-
-        print(maxmin_distscore)
-        maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
-        maxmin_edgecount = len(G.subgraph(ac_subset).edges)
-        maxmin_ECcount = len(maxmin_subset.keys()) / float(len(ec_to_ac.keys()))
-
-        tabu_subset, score_list, best_progress, sim_list2 = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, binary)
-        axs.flat[1].hist(sim_list2, bins=np.linspace(0, 1, num=20), histtype='step')
-        axs.flat[1].set_ylim(0, 5000)
-        axs.flat[1].set_title("Tabu Search MDP Solver", fontsize=10, fontweight='bold')
-
-        mean = round(np.mean(sim_list2), 3)
-        std = round(np.std(sim_list2), 3)
-
-        axs.flat[1].text(0, 4000, f"{mean}±{std}")
-
-        fig.suptitle("Sequence Similarity Distributions for PF00171 ")
-
-        print(len(ec_to_ac.keys()))
-        print(len(maxmin_subset.keys()))
-
-        greedy_coverage = len(maxmin_subset.keys()) / len(ec_to_ac.keys())
-
-        print(f"Greedy Coverage: {greedy_coverage}")
-
-        print(sorted(maxmin_subset))
-        print(ac_subset)
-        print(len(G.subgraph(ac_subset).edges))
-
-        gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
-        gs_val = gini_simpson_value(gs_dict)
-
-        print(f"Greedy Gini: {gs_val}")
-
-        best_tabu_subset = []
-        best_tabu_index = 0
-        best_score = 0
-
-        ecnum_list = []
-        edgenum_list = []
-
-        for i in range(len(tabu_subset)):
-
-            ecs = get_ec_subset(tabu_subset[i], ac_to_ec)
-            ec_num = len(ecs.keys()) / float(total_ec_count)
-            ecnum_list += [ec_num]
-            print(ec_num, len(G.subgraph(tabu_subset[i]).edges), score_list[i])
-            edgenum_list += [len(G.subgraph(tabu_subset[i]).edges)]
-
-            if ec_num > best_score:
-                best_score = ec_num
-                best_tabu_index = i
-
-        best_tabu = tabu_subset[best_tabu_index]
-        print(get_ec_subset(best_tabu, ac_to_ec).keys())
-        print(best_score)
-        print(best_tabu)
-        gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
-        gs_val = gini_simpson_value(gs_dict)
-        print(f"Tabu Gini: {gs_val}")
-
-        fig1, ax1 = plt.subplots()
-
-        ax1.plot(best_progress)
-        ax1.set_xlabel("Epochs")
-        ax1.set_ylabel("Distance Score")
-        ax1.set_title("Distance Score Over Time for K=100 ")
-        ax1.axhline(maxmin_distscore, c="red", alpha=0.25, linestyle="--")
-
-        fig, axs = plt.subplots(2)
-        fig.suptitle('EC Coverage vs Distance Score/Number of Edges for K=100')
-
-        temp_ecnum_list = deepcopy(ecnum_list)
-        print(edgenum_list, ecnum_list)
-        edgenum_list, ecnum_list = (list(t) for t in zip(*sorted(zip(edgenum_list, ecnum_list))))
-        print(edgenum_list, ecnum_list)
-        print(score_list, temp_ecnum_list)
-        score_list, temp_ecnum_list = (list(t) for t in zip(*sorted(zip(score_list, temp_ecnum_list))))
-        print(score_list, temp_ecnum_list)
-
-        axs[0].scatter(edgenum_list, ecnum_list, alpha=0.25)
-        axs.flat[0].set(xlabel='Number of Edges')
-        axs.flat[0].set(ylabel='EC Coverage')
-        axs.flat[0].set_ylim(0, 1)
-        axs[0].scatter(maxmin_edgecount, maxmin_ECcount)
-        axs[0].plot(edgenum_list, ecnum_list, alpha=0.25)
-
-        axs[1].scatter(score_list, temp_ecnum_list, alpha=0.25)
-        axs.flat[1].set(xlabel='Distance Score')
-        axs.flat[1].set(ylabel='EC Coverage')
-        axs.flat[1].set_ylim(0, 1)
-        axs[1].scatter(maxmin_distscore, maxmin_ECcount)
-        axs[1].plot(score_list, temp_ecnum_list, alpha=0.25)
-
-        plt.show()
-
-
 
     else:
         node_num = len(ac_to_ec)
