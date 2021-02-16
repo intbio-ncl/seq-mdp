@@ -1,7 +1,7 @@
 [submodule "MEnzDP-SimpleTabuSearch"]
 	path = simpleTabuSearch
-	url = git@github.com:chrisAta/MEnzDP-SimpleTabuSearch.git
+	url = https://github.com/chrisAta/MEnzDP-SimpleTabuSearch.git
 	branch = refactor
 [submodule "diversityStats"]
 	path = diversityStats
-	url = git@github.com:chrisAta/diversityStats.git
+	url = https://github.com/chrisAta/diversityStats.git
