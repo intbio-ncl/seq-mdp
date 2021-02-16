@@ -15,7 +15,7 @@ from copy import deepcopy
 import argparse
 
 parser = argparse.ArgumentParser(description="MDP Filler stuff") #TODO: Change desc
-parser.add_argument("-a", "--annotation", help="Path to the annotation", type=str, required=True)
+parser.add_argument("-a", "--annotation", help="Path to the annotation", type=str, required=False)
 parser.add_argument("-hd", "--heading", help="Path to heading file", type=str, required=True)
 parser.add_argument("-d", "--distance", help="Path to distance file", type=str, required=True)
 parser.add_argument("-k", "--subset", help="Subset size", type=int, required=True)
@@ -90,7 +90,12 @@ def score(mat, sol, use_clan=False):
     return score, sim_list
 
 
-def greedy_mdp(ac_to_ec, ec_to_ac):
+def greedy_mdp(ac_to_ec=None, ec_to_ac=None):
+
+    maxmin_subset = None
+    maxmin_edgecount = None
+    maxmin_ECcount = None
+    greedy_coverage = None
 
     ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
     G = nx.read_gml(_GRAPHPATH)
@@ -98,21 +103,24 @@ def greedy_mdp(ac_to_ec, ec_to_ac):
 
     maxmin_distscore, sim_list = score(mat, binary, True)
 
-    maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
-    maxmin_edgecount = len(G.subgraph(ac_subset).edges)
-    maxmin_ECcount = len(maxmin_subset.keys()) / float(len(ec_to_ac.keys()))
+    if ac_to_ec is not None:
+        maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
+        maxmin_edgecount = len(G.subgraph(ac_subset).edges)
+        maxmin_ECcount = len(maxmin_subset.keys()) / float(len(ec_to_ac.keys()))
+        greedy_coverage = len(maxmin_subset.keys()) / len(ec_to_ac.keys())
 
-    greedy_coverage = len(maxmin_subset.keys()) / len(ec_to_ac.keys())
-    print(f"Greedy Coverage: {greedy_coverage}")
+        print(f"Greedy Coverage: {greedy_coverage}")
+        print(sorted(maxmin_subset))
 
-    print(sorted(maxmin_subset))
+        gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
+        gs_val = gini_simpson_value(gs_dict)
+        print(f"Greedy Gini: {gs_val}")
+
+        fw_greedy = open("greedy_vals.txt", "w")
+        fw_greedy.write(f"Greedy Coverage:{greedy_coverage}\nGreedy Gini-Simpson: {gs_val}")
+        fw_greedy.close()
+
     print(ac_subset)
-    print(len(G.subgraph(ac_subset).edges))
-
-    gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
-    gs_val = gini_simpson_value(gs_dict)
-
-    print(f"Greedy Gini: {gs_val}")
 
     fw_greedy = open("./greedy_subset.txt", "w")
     for entry in ac_subset:
@@ -123,40 +131,45 @@ def greedy_mdp(ac_to_ec, ec_to_ac):
     plot_res(sim_list, 'greedy')
 
 
-def ts_mdp(ac_to_ec, ec_to_ac, preset=None):
+def ts_mdp(ac_to_ec=None, ec_to_ac=None, preset=None):
 
-    total_ec_count = len(ec_to_ac.keys())
     tabu_subset, score_list, best_progress, sim_list = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, preset)
 
     G = nx.read_gml(_GRAPHPATH)
     G.remove_edges_from(nx.selfloop_edges(G))
 
-    best_tabu_subset = []
     best_tabu_index = 0
     best_score = 0
 
     ecnum_list = []
     edgenum_list = []
 
+    best_tabu = tabu_subset[0]
+
     for i in range(len(tabu_subset)):
 
-        ecs = get_ec_subset(tabu_subset[i], ac_to_ec)
-        ec_num = len(ecs.keys()) / float(total_ec_count)
-        ecnum_list += [ec_num]
-        print(ec_num, len(G.subgraph(tabu_subset[i]).edges), score_list[i])
-        edgenum_list += [len(G.subgraph(tabu_subset[i]).edges)]
+        if ac_to_ec is not None:
+            ecs = get_ec_subset(tabu_subset[i], ac_to_ec)
+            ec_num = len(ecs.keys()) / float(len(ec_to_ac.keys()))
+            ecnum_list += [ec_num]
+            print(ec_num, len(G.subgraph(tabu_subset[i]).edges), score_list[i])
+            edgenum_list += [len(G.subgraph(tabu_subset[i]).edges)]
 
-        if ec_num > best_score:
-            best_score = ec_num
-            best_tabu_index = i
+            if ec_num > best_score:
+                best_score = ec_num
+                best_tabu_index = i
 
-    best_tabu = tabu_subset[best_tabu_index]
-    print(get_ec_subset(best_tabu, ac_to_ec).keys())
-    print(best_score)
-    print(best_tabu)
-    gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
-    gs_val = gini_simpson_value(gs_dict)
-    print(f"Tabu Gini: {gs_val}")
+            best_tabu = tabu_subset[best_tabu_index]
+            print(get_ec_subset(best_tabu, ac_to_ec).keys())
+            print(best_score)
+            print(best_tabu)
+            gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
+            gs_val = gini_simpson_value(gs_dict)
+            print(f"Tabu Gini: {gs_val}")
+
+            fw_ts = open("ts_vals.txt", "w")
+            fw_ts.write(f"Tabu Search Coverage: {ec_num}\nTabu Search Gini-Simpson: {gs_val}")
+            fw_ts.close()
 
     fw_TS = open("./ts_subset.txt", "w")
     for entry in best_tabu:
@@ -196,17 +209,29 @@ def plot_res(sim_list, solver):
 
 def main():
 
-    ac_to_ec, ec_to_ac = uniprot_ec_dict(_ANNPATH, 2)
-    ec_num = len(set(ac_to_ec.values()))
-    total_ec_count = len(ec_to_ac.keys())
+    ac_to_ec = None
+    ec_to_ac = None
+    ec_num = None
+    total_ec_count = None
+
+    if _ANNPATH is not None:
+        ac_to_ec, ec_to_ac = uniprot_ec_dict(_ANNPATH, 2)
+        ec_num = len(set(ac_to_ec.values()))
+        total_ec_count = len(ec_to_ac.keys())
 
     if _K != 0:
 
         if _SOLVER in ('all', 'greedy'):
-            greedy_mdp(ac_to_ec, ec_to_ac)
+            if _ANNPATH is not None:
+                greedy_mdp(ac_to_ec, ec_to_ac)
+            else:
+                greedy_mdp()
 
         if _SOLVER in ('all', 'ts'):
-            ts_mdp(ac_to_ec, ec_to_ac)
+            if _ANNPATH is not None:
+                ts_mdp(ac_to_ec, ec_to_ac)
+            else:
+                ts_mdp()
 
     else:
         node_num = len(ac_to_ec)
