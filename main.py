@@ -219,12 +219,9 @@ def main():
         threshold = int(0.1 * node_num)
         sol, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, threshold)
 
-# for i in range(1, int(0.35 * node_num)):
-
         counter = len(solutions[0])
         for ac_subset in solutions:
-            # ac_subset, binary = compute_diverse_subset(_DISTPATH, _HEADPATH, i)
-            # print(ac_subset)
+
             ec_subset = get_ec_subset(ac_subset, ac_to_ec)
             subset_ec_count = len(ec_subset.keys())
 

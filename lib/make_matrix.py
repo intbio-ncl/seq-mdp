@@ -3,13 +3,23 @@ import numpy as np
 from collections import defaultdict
 import json
 
-_INPUT = "./PF00155_trembl_mat.txt"
+#########################################
+
+import argparse
+
+parser = argparse.ArgumentParser(description="MDP Filler stuff") #TODO: Change desc
+parser.add_argument("-i", "--input", help="Path to the needle result", type=str, required=True)
+
+
+args = parser.parse_args()
+_INPUT = args.input
+
+#########################################
 
 
 def read_identities(file):
 
     fr = open(file, 'r')
-    mat = np.zeros((10_000, 10_000))
     mat_dict = defaultdict(dict)
     index_dict = defaultdict(int)
 
@@ -31,6 +41,9 @@ def read_identities(file):
         index_dict[key] = counter
         counter += 1
 
+    print(len(headers))
+    mat = np.zeros((len(headers), len(headers)))
+
     for key_i in mat_dict.keys():
         for key_j in mat_dict[key_i]:
             i = index_dict[key_i]
@@ -44,12 +57,12 @@ def read_identities(file):
 
 def save_matrix(mat):
 
-    np.save('PF00155_trembl_mat.npy', mat)
+    np.save('mat.npy', mat)
 
 
 def save_header(headers):
 
-    with open(f'PF00155_trembl_headings.json', 'w') as outfile:
+    with open(f'headings.json', 'w') as outfile:
         json.dump(list(headers), outfile)
 
 
