@@ -76,7 +76,7 @@ process make_matrix{
     // Restructure result of needleall to be used in MDP solving
 
     publishDir outdir, mode : "copy"
-    container 'mdp-kit'
+    container 'chrisata/mdp-kit'
 
     input:
     file identities
@@ -89,7 +89,7 @@ process make_matrix{
     flag
 
     """
-    python3 /code/lib/make_matrix.py -i ${identities}
+    python3 /seq-mdp/lib/make_matrix.py -i ${identities}
     """
 }
 
@@ -101,7 +101,7 @@ process solve_mdp{
     // Solve the MDP
 
     publishDir outdir, mode : "copy"
-    container 'mdp-kit'
+    container 'chrisata/mdp-kit'
 
     input:
     file mat
@@ -117,6 +117,6 @@ process solve_mdp{
     def ann_filter = ann.name != 'NO_FILE' ? "-a $ann" : ''
 
     """
-    python3 /code/main.py $ann_filter -hd ${head} -d ${mat} -k ${k} -g ${graph} -s ${solver}
+    python3 /seq-mdp/main.py $ann_filter -hd ${head} -d ${mat} -k ${k} -g ${graph} -s ${solver}
     """
 }
