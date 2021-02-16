@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 from diversityStats.lib.uniprot_ec_dict import uniprot_ec_dict
 from diversityStats.lib.max_min_diversity import compute_diverse_subset
@@ -14,10 +15,12 @@ from copy import deepcopy
 import argparse
 
 parser = argparse.ArgumentParser(description="MDP Filler stuff") #TODO: Change desc
-parser.add_argument("-a", "--annotation", help="Path to the annotation", type=str, required=True)
+parser.add_argument("-a", "--annotation", help="Path to the annotation", type=str, required=False)
 parser.add_argument("-hd", "--heading", help="Path to heading file", type=str, required=True)
 parser.add_argument("-d", "--distance", help="Path to distance file", type=str, required=True)
 parser.add_argument("-k", "--subset", help="Subset size", type=int, required=True)
+parser.add_argument("-g", "--graph", help="Path to Similarity Network (.gml) to output graph-based results", type=str, required=True)
+parser.add_argument("-s", "--solver", choices=["greedy", "ts", "all"], help="Solver(s) to use (Choices are 'greedy', 'ts', or both with 'all').", required=True)
 
 
 args = parser.parse_args()
@@ -25,6 +28,8 @@ _ANNPATH = args.annotation
 _HEADPATH = args.heading
 _DISTPATH = args.distance
 _K = args.subset
+_GRAPHPATH = args.graph
+_SOLVER = args.solver
 
 
 #########################################
@@ -85,77 +90,67 @@ def score(mat, sol, use_clan=False):
     return score, sim_list
 
 
-def main():
+def greedy_mdp(ac_to_ec=None, ec_to_ac=None):
 
-    ac_to_ec, ec_to_ac = uniprot_ec_dict(_ANNPATH, 2)
-    ec_num = len(set(ac_to_ec.values()))
-    total_ec_count = len(ec_to_ac.keys())
+    maxmin_subset = None
+    maxmin_edgecount = None
+    maxmin_ECcount = None
+    greedy_coverage = None
 
-    if _K != 0:
-        ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
+    ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
+    G = nx.read_gml(_GRAPHPATH)
+    G.remove_edges_from(nx.selfloop_edges(G))
 
-        G = nx.read_gml('./PF00155_ssn_40.gml') #TODO argparse this
-        G.remove_edges_from(nx.selfloop_edges(G))
+    maxmin_distscore, sim_list = score(mat, binary, True)
 
-        maxmin_distscore, sim_list = score(mat, binary, True)
-
-
-        fig, axs = plt.subplots(2)
-
-        axs.flat[0].hist(sim_list, bins=np.linspace(0, 1, num=20), histtype='step')
-        axs.flat[0].set_ylim(0, 5000)
-        axs.flat[0].set_title("Max-Min MDP Solver", fontsize=10, fontweight='bold')
-
-        mean = round(np.mean(sim_list), 3)
-        std = round(np.std(sim_list), 3)
-
-        axs.flat[0].text(0, 4000, f"{mean}±{std}")
-
-        print(maxmin_distscore)
+    if ac_to_ec is not None:
         maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
         maxmin_edgecount = len(G.subgraph(ac_subset).edges)
         maxmin_ECcount = len(maxmin_subset.keys()) / float(len(ec_to_ac.keys()))
-
-        tabu_subset, score_list, best_progress, sim_list2 = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, binary)
-        axs.flat[1].hist(sim_list2, bins=np.linspace(0, 1, num=20), histtype='step')
-        axs.flat[1].set_ylim(0, 5000)
-        axs.flat[1].set_title("Tabu Search MDP Solver", fontsize=10, fontweight='bold')
-
-
-        mean = round(np.mean(sim_list2), 3)
-        std = round(np.std(sim_list2), 3)
-
-        axs.flat[1].text(0, 4000, f"{mean}±{std}")
-
-        fig.suptitle("Sequence Similarity Distributions for PF00171 ")
-
-        print(len(ec_to_ac.keys()))
-        print(len(maxmin_subset.keys()))
-
         greedy_coverage = len(maxmin_subset.keys()) / len(ec_to_ac.keys())
 
         print(f"Greedy Coverage: {greedy_coverage}")
-
         print(sorted(maxmin_subset))
-        print(ac_subset)
-        print(len(G.subgraph(ac_subset).edges))
 
         gs_dict = gini_simpson_dict(ac_subset, ac_to_ec)
         gs_val = gini_simpson_value(gs_dict)
-
         print(f"Greedy Gini: {gs_val}")
 
-        best_tabu_subset = []
-        best_tabu_index = 0
-        best_score = 0
+        fw_greedy = open("greedy_vals.txt", "w")
+        fw_greedy.write(f"Greedy Coverage:{greedy_coverage}\nGreedy Gini-Simpson: {gs_val}")
+        fw_greedy.close()
 
-        ecnum_list = []
-        edgenum_list = []
+    print(ac_subset)
 
-        for i in range(len(tabu_subset)):
+    fw_greedy = open("./greedy_subset.txt", "w")
+    for entry in ac_subset:
+        fw_greedy.write(entry + "\n")
 
+    fw_greedy.close()
+
+    plot_res(sim_list, 'greedy')
+
+
+def ts_mdp(ac_to_ec=None, ec_to_ac=None, preset=None):
+
+    tabu_subset, score_list, best_progress, sim_list = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, preset)
+
+    G = nx.read_gml(_GRAPHPATH)
+    G.remove_edges_from(nx.selfloop_edges(G))
+
+    best_tabu_index = 0
+    best_score = 0
+
+    ecnum_list = []
+    edgenum_list = []
+
+    best_tabu = tabu_subset[0]
+
+    for i in range(len(tabu_subset)):
+
+        if ac_to_ec is not None:
             ecs = get_ec_subset(tabu_subset[i], ac_to_ec)
-            ec_num = len(ecs.keys()) / float(total_ec_count)
+            ec_num = len(ecs.keys()) / float(len(ec_to_ac.keys()))
             ecnum_list += [ec_num]
             print(ec_num, len(G.subgraph(tabu_subset[i]).edges), score_list[i])
             edgenum_list += [len(G.subgraph(tabu_subset[i]).edges)]
@@ -164,48 +159,79 @@ def main():
                 best_score = ec_num
                 best_tabu_index = i
 
-        best_tabu = tabu_subset[best_tabu_index]
-        print(get_ec_subset(best_tabu, ac_to_ec).keys())
-        print(best_score)
-        print(best_tabu)
-        gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
-        gs_val = gini_simpson_value(gs_dict)
-        print(f"Tabu Gini: {gs_val}")
+            best_tabu = tabu_subset[best_tabu_index]
+            print(get_ec_subset(best_tabu, ac_to_ec).keys())
+            print(best_score)
+            print(best_tabu)
+            gs_dict = gini_simpson_dict(best_tabu, ac_to_ec)
+            gs_val = gini_simpson_value(gs_dict)
+            print(f"Tabu Gini: {gs_val}")
 
-        fig1, ax1 = plt.subplots()
+            fw_ts = open("ts_vals.txt", "w")
+            fw_ts.write(f"Tabu Search Coverage: {ec_num}\nTabu Search Gini-Simpson: {gs_val}")
+            fw_ts.close()
 
-        ax1.plot(best_progress)
-        ax1.set_xlabel("Epochs")
-        ax1.set_ylabel("Distance Score")
-        ax1.set_title("Distance Score Over Time for K=100 ")
-        ax1.axhline(maxmin_distscore, c="red", alpha=0.25, linestyle="--")
+    fw_TS = open("./ts_subset.txt", "w")
+    for entry in best_tabu:
+        fw_TS.write(entry + "\n")
 
-        fig, axs = plt.subplots(2)
-        fig.suptitle('EC Coverage vs Distance Score/Number of Edges for K=100')
+    fw_TS.close()
 
-        temp_ecnum_list = deepcopy(ecnum_list)
-        print(edgenum_list, ecnum_list)
-        edgenum_list, ecnum_list = (list(t) for t in zip(*sorted(zip(edgenum_list, ecnum_list))))
-        print(edgenum_list, ecnum_list)
-        print(score_list, temp_ecnum_list)
-        score_list, temp_ecnum_list = (list(t) for t in zip(*sorted(zip(score_list, temp_ecnum_list))))
-        print(score_list, temp_ecnum_list)
+    plot_res(sim_list, 'tabu')
 
-        axs[0].scatter(edgenum_list, ecnum_list, alpha=0.25)
-        axs.flat[0].set(xlabel='Number of Edges')
-        axs.flat[0].set(ylabel='EC Coverage')
-        axs.flat[0].set_ylim(0, 1)
-        axs[0].scatter(maxmin_edgecount, maxmin_ECcount)
-        axs[0].plot(edgenum_list, ecnum_list, alpha=0.25)
 
-        axs[1].scatter(score_list, temp_ecnum_list, alpha=0.25)
-        axs.flat[1].set(xlabel='Distance Score')
-        axs.flat[1].set(ylabel='EC Coverage')
-        axs.flat[1].set_ylim(0, 1)
-        axs[1].scatter(maxmin_distscore, maxmin_ECcount)
-        axs[1].plot(score_list, temp_ecnum_list, alpha=0.25)
+def plot_res(sim_list, solver):
 
-        plt.show()
+    fig, axs = plt.subplots()
+
+    solver_title = ''
+    file_title = ''
+
+    if solver == 'tabu':
+        solver_title = "Tabu Search"
+        file_title = 'ts_distribution.pdf'
+
+    elif solver == 'greedy':
+        solver_title = 'Greedy'
+        file_title = 'greedy_distribution.pdf'
+
+    plt.hist(sim_list, bins=np.linspace(0, 1, num=20), histtype='step')
+    plt.ylim(0, 5000)
+    plt.title(f"Sequence Identity Distribution: K={_K}, Solver={solver_title}", fontsize=10, fontweight='bold')
+
+    mean = round(np.mean(sim_list), 3)
+    std = round(np.std(sim_list), 3)
+
+    plt.text(0, 4000, f"{mean}±{std}")
+
+    plt.savefig(file_title)
+
+
+def main():
+
+    ac_to_ec = None
+    ec_to_ac = None
+    ec_num = None
+    total_ec_count = None
+
+    if _ANNPATH is not None:
+        ac_to_ec, ec_to_ac = uniprot_ec_dict(_ANNPATH, 2)
+        ec_num = len(set(ac_to_ec.values()))
+        total_ec_count = len(ec_to_ac.keys())
+
+    if _K != 0:
+
+        if _SOLVER in ('all', 'greedy'):
+            if _ANNPATH is not None:
+                greedy_mdp(ac_to_ec, ec_to_ac)
+            else:
+                greedy_mdp()
+
+        if _SOLVER in ('all', 'ts'):
+            if _ANNPATH is not None:
+                ts_mdp(ac_to_ec, ec_to_ac)
+            else:
+                ts_mdp()
 
     else:
         node_num = len(ac_to_ec)
@@ -218,12 +244,9 @@ def main():
         threshold = int(0.1 * node_num)
         sol, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, threshold)
 
-# for i in range(1, int(0.35 * node_num)):
-
         counter = len(solutions[0])
         for ac_subset in solutions:
-            # ac_subset, binary = compute_diverse_subset(_DISTPATH, _HEADPATH, i)
-            # print(ac_subset)
+
             ec_subset = get_ec_subset(ac_subset, ac_to_ec)
             subset_ec_count = len(ec_subset.keys())
 
