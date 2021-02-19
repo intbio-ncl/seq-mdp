@@ -7,9 +7,8 @@ from diversityStats.lib.gini_simpson import gini_simpson_dict, gini_simpson_valu
 from simpleTabuSearch.simple_tabu_imp import compute_MDP_tabu
 
 import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
-from copy import deepcopy
+
 #########################################
 
 import argparse
@@ -19,7 +18,6 @@ parser.add_argument("-a", "--annotation", help="Path to the annotation", type=st
 parser.add_argument("-hd", "--heading", help="Path to heading file", type=str, required=True)
 parser.add_argument("-d", "--distance", help="Path to distance file", type=str, required=True)
 parser.add_argument("-k", "--subset", help="Subset size", type=int, required=True)
-parser.add_argument("-g", "--graph", help="Path to Similarity Network (.gml) to output graph-based results", type=str, required=True)
 parser.add_argument("-s", "--solver", choices=["greedy", "ts", "all"], help="Solver(s) to use (Choices are 'greedy', 'ts', or both with 'all').", required=True)
 
 
@@ -28,7 +26,6 @@ _ANNPATH = args.annotation
 _HEADPATH = args.heading
 _DISTPATH = args.distance
 _K = args.subset
-_GRAPHPATH = args.graph
 _SOLVER = args.solver
 
 
@@ -93,20 +90,14 @@ def score(mat, sol, use_clan=False):
 def greedy_mdp(ac_to_ec=None, ec_to_ac=None):
 
     maxmin_subset = None
-    maxmin_edgecount = None
-    maxmin_ECcount = None
     greedy_coverage = None
 
     ac_subset, binary, solutions, mat = compute_diverse_subset(_DISTPATH, _HEADPATH, _K)
-    G = nx.read_gml(_GRAPHPATH)
-    G.remove_edges_from(nx.selfloop_edges(G))
 
     maxmin_distscore, sim_list = score(mat, binary, True)
 
     if ac_to_ec is not None:
         maxmin_subset = get_ec_subset(ac_subset, ac_to_ec)
-        maxmin_edgecount = len(G.subgraph(ac_subset).edges)
-        maxmin_ECcount = len(maxmin_subset.keys()) / float(len(ec_to_ac.keys()))
         greedy_coverage = len(maxmin_subset.keys()) / len(ec_to_ac.keys())
 
         print(f"Greedy Coverage: {greedy_coverage}")
@@ -135,15 +126,9 @@ def ts_mdp(ac_to_ec=None, ec_to_ac=None, preset=None):
 
     tabu_subset, score_list, best_progress, sim_list = compute_MDP_tabu(_DISTPATH, _HEADPATH, _K, 0, preset)
 
-    G = nx.read_gml(_GRAPHPATH)
-    G.remove_edges_from(nx.selfloop_edges(G))
-
     best_tabu_index = 0
     best_score = 0
-
     ecnum_list = []
-    edgenum_list = []
-
     best_tabu = tabu_subset[0]
 
     for i in range(len(tabu_subset)):
@@ -152,8 +137,6 @@ def ts_mdp(ac_to_ec=None, ec_to_ac=None, preset=None):
             ecs = get_ec_subset(tabu_subset[i], ac_to_ec)
             ec_num = len(ecs.keys()) / float(len(ec_to_ac.keys()))
             ecnum_list += [ec_num]
-            print(ec_num, len(G.subgraph(tabu_subset[i]).edges), score_list[i])
-            edgenum_list += [len(G.subgraph(tabu_subset[i]).edges)]
 
             if ec_num > best_score:
                 best_score = ec_num
@@ -211,12 +194,10 @@ def main():
 
     ac_to_ec = None
     ec_to_ac = None
-    ec_num = None
     total_ec_count = None
 
     if _ANNPATH is not None:
         ac_to_ec, ec_to_ac = uniprot_ec_dict(_ANNPATH, 2)
-        ec_num = len(set(ac_to_ec.values()))
         total_ec_count = len(ec_to_ac.keys())
 
     if _K != 0:

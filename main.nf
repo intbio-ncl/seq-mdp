@@ -12,12 +12,13 @@ Can optionally submit an annotation file, for which Coverage and Gini-Simpson
 values will be computed.
 */
 
+
+
 // Initialise Parameters
 params.seqs = null
 params.mat = null
 params.head = null
 params.ann = 'NO_FILE' // annotation file is optional
-params.graph = null
 params.k = null
 params.outdir = null
 params.solver = null
@@ -43,7 +44,6 @@ else {
 }
 
 ann = file( params.ann )
-graph = file ( params.graph )
 k = params.k
 solver = params.solver
 
@@ -107,7 +107,6 @@ process solve_mdp{
     file mat
     file head
     file ann
-    file graph
 
     output:
     file "*.txt"
@@ -117,6 +116,6 @@ process solve_mdp{
     def ann_filter = ann.name != 'NO_FILE' ? "-a $ann" : ''
 
     """
-    python3 /seq-mdp/main.py $ann_filter -hd ${head} -d ${mat} -k ${k} -g ${graph} -s ${solver}
+    python3 /seq-mdp/main.py $ann_filter -hd ${head} -d ${mat} -k ${k} -s ${solver}
     """
 }
