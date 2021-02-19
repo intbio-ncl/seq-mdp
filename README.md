@@ -18,10 +18,10 @@ The only requirements are [Nextflow](https://www.nextflow.io/) and [Docker](http
 --outdir :  Directory to store the results in.
 
 --mat :     Numpy matrix containing the sequence identities from a previous run 'from scratch'.
-            Can be paired with --head as input to rerun the workflow with the same sequences faster.
+            Should be paired with --head as input to rerun the workflow with the same sequences faster.
 
 --head :    JSON file containing the headings from a previous run 'from scratch'.
-            Can be paired with --mat as input to rerun the workflow with the same sequences faster.
+            Should be paired with --mat as input to rerun the workflow with the same sequences faster.
 
 --ann :     Table file containing class annotation about the sequences. Use to produce diversity assessment of solution.
             Format should just be two columns - Sequence ID in the first, classes in the second.
