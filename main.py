@@ -14,7 +14,7 @@ from copy import deepcopy
 
 import argparse
 
-parser = argparse.ArgumentParser(description="MDP Filler stuff") #TODO: Change desc
+parser = argparse.ArgumentParser(description="Solve the Maximum Diversity Problem for protein sequence sampling.") #TODO: Change desc
 parser.add_argument("-a", "--annotation", help="Path to the annotation", type=str, required=False)
 parser.add_argument("-hd", "--heading", help="Path to heading file", type=str, required=True)
 parser.add_argument("-d", "--distance", help="Path to distance file", type=str, required=True)
