@@ -76,7 +76,6 @@ process make_matrix{
     // Restructure result of needleall to be used in MDP solving
 
     publishDir outdir, mode : "copy"
-    container 'chrisata/mdp-kit'
 
     input:
     file identities
@@ -101,7 +100,6 @@ process solve_mdp{
     // Solve the MDP
 
     publishDir outdir, mode : "copy"
-    container 'chrisata/mdp-kit'
 
     input:
     file mat
