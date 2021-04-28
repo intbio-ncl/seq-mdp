@@ -67,7 +67,7 @@ process produce_identities{
     flag
 
     """
-    nextflow run /mnt/data/nf-needleall-ava/main.nf --infile ${seqs}  --outdir needle_out --threshold 0.00000001 --cpu 4
+    nextflow run /mnt/nf-needleall-ava/main.nf --infile ${seqs}  --outdir needle_out --threshold 0.00000001 --cpu 4
     cp ./needle_out/identities.txt ./
     """
 }
@@ -88,7 +88,7 @@ process make_matrix{
     flag
 
     """
-    python3 /mnt/data/seq-mdp/lib/make_matrix.py -i ${identities}
+    python3 /mnt/seq-mdp/lib/make_matrix.py -i ${identities}
     """
 }
 
@@ -114,6 +114,6 @@ process solve_mdp{
     def ann_filter = ann.name != 'NO_FILE' ? "-a $ann" : ''
 
     """
-    python3 /mnt/data/seq-mdp/main.py $ann_filter -hd ${head} -d ${mat} -k ${k} -s ${solver}
+    python3 /mnt/seq-mdp/main.py $ann_filter -hd ${head} -d ${mat} -k ${k} -s ${solver}
     """
 }
