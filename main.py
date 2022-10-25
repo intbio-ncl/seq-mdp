@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from diversityStats.lib.uniprot_ec_dict import uniprot_ec_dict
-from diversityStats.lib.max_min_diversity import compute_diverse_subset
+from diversityStats.lib.max_min_diversity2 import compute_diverse_subset
 from collections import defaultdict
 from diversityStats.lib.gini_simpson import gini_simpson_dict, gini_simpson_value
 from simpleTabuSearch.simple_tabu_imp import compute_MDP_tabu
@@ -107,13 +107,13 @@ def greedy_mdp(ac_to_ec=None, ec_to_ac=None):
         gs_val = gini_simpson_value(gs_dict)
         print(f"Greedy Gini: {gs_val}")
 
-        fw_greedy = open("greedy_vals.txt", "w")
+        fw_greedy = open("greedy_vals_updated_PF04055.txt", "w")
         fw_greedy.write(f"Greedy Coverage:{greedy_coverage}\nGreedy Gini-Simpson: {gs_val}")
         fw_greedy.close()
 
     print(ac_subset)
 
-    fw_greedy = open("./greedy_subset.txt", "w")
+    fw_greedy = open("./greedy_subset_updated.txt", "w")
     for entry in ac_subset:
         fw_greedy.write(entry + "\n")
 

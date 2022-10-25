@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-_THR = 1e-1
+_THR = 1e-15
 
 
 def extract_scores(path, thr):
@@ -81,9 +81,9 @@ def check_overlap(ids_pfam, ids_mdp):
 
     all_matches = [] + unique_mdp + unique_pfam + overlap
 
-    save_ids(unique_pfam, "hmmsearch_pfam_sub.tab")
-    save_ids(unique_mdp, "hmmsearch_mdp_sub.tab")
-    save_ids(overlap, "hmmsearch_overlap_sub.tab")
+    save_ids(unique_pfam, "./hmmsearch_results/hmmsearch_pfam_sub_e15.tab")
+    save_ids(unique_mdp, "./hmmsearch_results/hmmsearch_mdp_sub_e15.tab")
+    save_ids(overlap, "./hmmsearch_results/hmmsearch_overlap_sub_e15.tab")
 
 
 def save_ids(tups, out):
@@ -98,8 +98,8 @@ def main():
 
     print(f"Threshold picked: {_THR}\n")
 
-    ids_pfam, e_vals_pfam, bit_scores_pfam = extract_scores("hmmsearch_res_pfam.tab", _THR)
-    ids_custom, e_vals_custom, bit_scores_custom = extract_scores("hmmsearch_res_custom.tab", _THR)
+    ids_pfam, e_vals_pfam, bit_scores_pfam = extract_scores("./hmmsearch_results/hmmsearch_res_pfam.tab", _THR)
+    ids_custom, e_vals_custom, bit_scores_custom = extract_scores("./hmmsearch_results/hmmsearch_res_mdp.tab", _THR)
 
     print("PFAM HMM:")
     ax = print_metrics(e_vals_pfam, bit_scores_pfam, 'PFAM')
