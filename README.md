@@ -59,3 +59,9 @@ Specifically, it produces:
 
 * __Coverage__ : The proportion of the total classes present in the solution e.g. how many of GO classes contained in the annotation file are present in the subset chosen.
 * __Gini-Simpson Index__ : The proportional abundance of classes present in the solution e.g. of all the GO classes present in the subset chosen, how equally abundant are they in their proportion.
+
+## Citation
+
+If you use this tool in your research, please cite our latest paper:
+
+[Atallah, Christian, et al. "Automatic Diverse Subset Selection From Enzyme Families by Solving the Maximum Diversity Problem." 2022 IEEE Conference on Computational Intelligence in Bioinformatics and Computational Biology (CIBCB). IEEE, 2022.](https://ieeexplore.ieee.org/abstract/document/9863021)
