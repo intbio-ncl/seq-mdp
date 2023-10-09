@@ -67,7 +67,7 @@ process produce_identities{
     flag
 
     """
-    nextflow run ravenlocke/nf-needleall-ava --infile ${seqs}  --outdir needle_out --threshold 0.00000001 --cpu 4
+    nextflow run ravenlocke/nf-needleall-ava --infile ${seqs}  --outdir needle_out --threshold 0.00000001 --cpu 12
     cp ./needle_out/identities.txt ./
     """
 }
